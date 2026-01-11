@@ -997,4 +997,272 @@ function updateStatistics(employees) {
 
 function updatePlacesStatistics(places) {
     document.getElementById('totalPlaces').textContent = places.length;
+
 }
+
+
+// ================= PROTECTION AGAINST DEVTOOLS =================
+(function() {
+    'use strict';
+    
+    // متغير لتتبع حالة الحماية
+    let devToolsOpened = false;
+    
+    // حالة الحماية الافتراضية (تفعيل/تعطيل)
+    const protectionEnabled = true;
+    
+    // لا تفعل الحماية في بيئة التطوير المحلي
+    const isLocalhost = window.location.hostname === 'localhost' || 
+                       window.location.hostname === '127.0.0.1';
+    
+    if (!protectionEnabled || isLocalhost) {
+        return; // لا تفعل الحماية
+    }
+    
+    // طرق اكتشاف فتح أدوات المطورين
+    function detectDevTools() {
+        const threshold = 160; // العتبة لاكتشاف DevTools
+        
+        // الطريقة 1: الفرق بين الأبعاد الداخلية والخارجية
+        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        
+        // الطريقة 2: تحقق من وجود أدوات المطورين
+        const devtools = /./;
+        devtools.toString = function() {
+            devToolsOpened = true;
+        };
+        console.log('%c', devtools);
+        
+        // الطريقة 3: وقت التنفيذ (أدوات المطورين تبطئ التنفيذ)
+        let start = performance.now();
+        debugger;
+        let end = performance.now();
+        const debuggerTime = end - start > 100;
+        
+        return widthThreshold || heightThreshold || devToolsOpened || debuggerTime;
+    }
+    
+    // إنشاء رسالة الحماية
+    function createProtectionMessage() {
+        const overlay = document.createElement('div');
+        overlay.id = 'devtools-protection-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #0d3b66, #1c77c3);
+            color: white;
+            z-index: 999999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+            font-family: 'Cairo', sans-serif;
+        `;
+        
+        const content = document.createElement('div');
+        content.style.cssText = `
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+        `;
+        
+        const icon = document.createElement('i');
+        icon.className = 'fas fa-shield-alt';
+        icon.style.cssText = `
+            font-size: 80px;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        `;
+        
+        const title = document.createElement('h1');
+        title.textContent = '⚠️ الحماية مفعلة ⚠️';
+        title.style.cssText = `
+            font-size: 32px;
+            margin-bottom: 20px;
+            color: #ffd166;
+        `;
+        
+        const message = document.createElement('p');
+        message.textContent = 'عذراً، لا يمكن فتح أدوات المطورين على هذا الموقع. هذه الميزة موجودة لحماية حقوق الملكية الفكرية والمحتوى الحصري للشركة.';
+        message.style.cssText = `
+            font-size: 18px;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        `;
+        
+        const contact = document.createElement('p');
+        contact.textContent = 'للتواصل أو الاستفسار: 01092217756';
+        contact.style.cssText = `
+            font-size: 16px;
+            color: #aad4ff;
+            margin-top: 20px;
+        `;
+        
+        content.appendChild(icon);
+        content.appendChild(title);
+        content.appendChild(message);
+        content.appendChild(contact);
+        overlay.appendChild(content);
+        
+        return overlay;
+    }
+    
+    // منع حق النقر بزر الماوس الأيمن
+    document.addEventListener('contextmenu', function(e) {
+        if (protectionEnabled && !isLocalhost) {
+            e.preventDefault();
+            
+            // عرض رسالة تنبيه صغيرة
+            const warning = document.createElement('div');
+            warning.textContent = '❌ غير مسموح بنسخ المحتوى';
+            warning.style.cssText = `
+                position: fixed;
+                top: ${e.clientY}px;
+                left: ${e.clientX}px;
+                background: #ff4757;
+                color: white;
+                padding: 8px 15px;
+                border-radius: 5px;
+                font-size: 14px;
+                z-index: 10000;
+                animation: fadeOut 2s forwards;
+            `;
+            
+            // إضافة أنيميشن
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes fadeOut {
+                    0% { opacity: 1; transform: translateY(0); }
+                    70% { opacity: 1; transform: translateY(-20px); }
+                    100% { opacity: 0; transform: translateY(-20px); }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(warning);
+            setTimeout(() => warning.remove(), 2000);
+        }
+    });
+    
+    // منع اختصارات لوحة المفاتيح
+    document.addEventListener('keydown', function(e) {
+        // منع Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, F12
+        if (protectionEnabled && !isLocalhost) {
+            const blockedKeys = [
+                e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c'),
+                e.ctrlKey && (e.key === 'U' || e.key === 'u'),
+                e.key === 'F12',
+                e.key === 'F11' && e.ctrlKey
+            ];
+            
+            if (blockedKeys.some(Boolean)) {
+                e.preventDefault();
+                
+                // عرض رسالة تنبيه
+                const warning = document.createElement('div');
+                warning.textContent = '🚫 هذا الأمر غير مسموح به';
+                warning.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: #ff4757;
+                    color: white;
+                    padding: 15px 30px;
+                    border-radius: 10px;
+                    font-size: 18px;
+                    z-index: 10000;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+                `;
+                
+                document.body.appendChild(warning);
+                setTimeout(() => warning.remove(), 2000);
+            }
+        }
+    });
+    
+    // مراقبة فتح أدوات المطورين
+    function monitorDevTools() {
+        if (detectDevTools()) {
+            if (!document.getElementById('devtools-protection-overlay')) {
+                const overlay = createProtectionMessage();
+                document.body.appendChild(overlay);
+                
+                // تعطيل التفاعل مع الصفحة
+                document.body.style.overflow = 'hidden';
+                
+                // إغلاق أي DevTools مفتوحة
+                setTimeout(() => {
+                    window.location.href = window.location.href;
+                }, 3000);
+            }
+        } else {
+            const overlay = document.getElementById('devtools-protection-overlay');
+            if (overlay) {
+                overlay.remove();
+                document.body.style.overflow = '';
+            }
+        }
+    }
+    
+    // بدء المراقبة
+    setInterval(monitorDevTools, 1000);
+    
+    // حماية إضافية: منع السحب والإسقاط للصور
+    document.addEventListener('dragstart', function(e) {
+        if (protectionEnabled && !isLocalhost && e.target.tagName === 'IMG') {
+            e.preventDefault();
+        }
+    });
+    
+    // منع اختيار النصوص (اختياري)
+    if (protectionEnabled && !isLocalhost) {
+        document.addEventListener('selectstart', function(e) {
+            e.preventDefault();
+        });
+        
+        document.body.style.userSelect = 'none';
+        document.body.style.webkitUserSelect = 'none';
+        document.body.style.msUserSelect = 'none';
+        document.body.style.mozUserSelect = 'none';
+    }
+    
+    // حماية ضد فحص العناصر عبر console
+    Object.defineProperty(window, 'console', {
+        get: function() {
+            if (protectionEnabled && !isLocalhost) {
+                return {
+                    log: function() {
+                        // لا تفعل شيء
+                    },
+                    warn: function() {
+                        // لا تفعل شيء
+                    },
+                    error: function() {
+                        // لا تفعل شيء
+                    },
+                    info: function() {
+                        // لا تفعل شيء
+                    },
+                    clear: function() {
+                        // لا تفعل شيء
+                    }
+                };
+            }
+            return console;
+        }
+    });
+    
+    console.log('✅ حماية الموقع مفعلة');
+})();
+// ================= END PROTECTION =================
