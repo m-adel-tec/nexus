@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="style.css">
+<title>نظام توزيع وإدارة المراقبين</title>
+</head>
+
+<body>
+
+<header>نظام توزيع وإدارة المراقبين على لجان الامتحانات</header>
+
+<div class="container">
+
+<!-- تبويبات التنقل -->
+<div class="tabs">
+    <button class="tab-button active" onclick="openTab('distribution')">التوزيع</button>
+    <button class="tab-button" onclick="openTab('employees')">إدارة الموظفين</button>
+    <button class="tab-button" onclick="openTab('places')">إدارة الأماكن</button>
+</div>
+
+<!-- تبويب التوزيع -->
+<div id="distribution" class="tab-content active">
+
+<!-- بيانات -->
+<div class="panel">
+<div class="panel-header">بيانات الفترة</div>
+<div class="panel-body row">
+    <div class="form-group">
+        <label>الفترة</label>
+        <select id="period">
+            <option>صباحية</option>
+            <option>مسائية</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>التاريخ</label>
+        <input type="date" id="examDate" style="text-align: right;">
+    </div>
+    <div class="form-group">
+        <label>عدد اللجان</label>
+        <input type="number" id="committeeCount" value="2" min="1" max="20" onchange="buildCommittees()">
+    </div>
+</div>
+</div>
+
+<!-- اللجان -->
+<div class="panel">
+<div class="panel-header">تفاصيل اللجان</div>
+<div class="panel-body">
+<table>
+<thead>
+<tr><th>اللجنة</th><th>الحد الأدنى للمراقبين</th><th>مكان اللجنة (اختياري)</th></tr>
+</thead>
+<tbody id="committeeTable"></tbody>
+</table>
+</div>
+</div>
+
+<!-- الموظفين -->
+<div class="panel">
+<div class="panel-header">المراقبون المتاحون</div>
+<div class="panel-body">
+
+<!-- Pagination Controls -->
+<div class="table-controls">
+    <div>
+        <input type="text" id="search" placeholder="بحث بالاسم..." onkeyup="filterEmployees()">
+        <!-- إضافة فلتر الوظيفة -->
+        <select id="roleFilterDistribution" onchange="filterEmployees()" style="width:150px; margin-right:10px;">
+            <option value="">جميع الوظائف</option>
+            <option value="إداري">إداري</option>
+            <option value="معيد">معيد</option>
+            <option value="أستاذ">أستاذ</option>
+            <option value="أستاذ مساعد">أستاذ مساعد</option>
+            <option value="مدرس">مدرس</option>
+        </select>
+    </div>
+    <div>
+        <label>عرض:</label>
+        <select id="pageSizeSelect" onchange="changePageSize()">
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="0">الكل</option>
+        </select>
+    </div>
+</div>
+
+<div class="counter">عدد المحددين: <span id="selectedCount">0</span></div>
+
+<br>
+<button class="btn-gray" onclick="selectAll()">اختيار الكل</button>
+<button class="btn-gray" onclick="clearAll()">إلغاء التحديد</button>
+<button class="btn-green" onclick="exportSelectedToPDF()">تصدير المحددين (PDF)</button>
+
+<table>
+<thead>
+<tr>
+<th>اختيار</th><th>الاسم</th><th>الوظيفة</th>
+</tr>
+</thead>
+<tbody id="empTable"></tbody>
+</table>
+
+<!-- Pagination -->
+<div class="pagination" id="paginationControls">
+    <button class="btn-gray" onclick="prevPage()">السابق</button>
+    <span id="pageInfo">الصفحة 1 من 1</span>
+    <button class="btn-gray" onclick="nextPage()">التالي</button>
+</div>
+
+</div>
+</div>
+
+<!-- تنفيذ -->
+<div class="panel">
+<div class="panel-header">تنفيذ</div>
+<div class="panel-body">
+<button class="btn-blue" onclick="distribute()">تنفيذ التوزيع</button>
+<button class="btn-green" onclick="savePDF()">حفظ PDF / طباعة التقرير</button>
+<button class="btn-orange" onclick="resetAll()">إعادة تعيين</button>
+</div>
+</div>
+
+<!-- النتيجة -->
+<div class="panel">
+<div class="panel-header">نتيجة التوزيع</div>
+<div class="panel-body">
+<div id="result" class="result"></div>
+</div>
+</div>
+
+</div>
+
+<!-- تبويب إدارة الموظفين -->
+<div id="employees" class="tab-content">
+
+<div class="stats">
+    <div class="stat-card">
+        <div class="stat-value" id="totalEmployees">0</div>
+        <div class="stat-label">إجمالي الموظفين</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" id="adminEmployees">0</div>
+        <div class="stat-label">موظف إداري</div>
+    </div>
+        <div class="stat-card">
+        <div class="stat-value" id="staffEmployees">0</div>
+        <div class="stat-label">عضو هيئة تدريس</div>
+    </div>
+</div>
+
+<!-- إضافة/تعديل موظف -->
+<div class="panel">
+<div class="panel-header" id="formTitle">إضافة موظف جديد</div>
+<div class="panel-body">
+    <form id="employeeForm">
+        <input type="hidden" id="employeeId">
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>الاسم الكامل *</label>
+                <input type="text" id="empName" required placeholder="أدخل الاسم الكامل">
+            </div>
+            <div class="form-group">
+                <label>الوظيفة *</label>
+                <!-- <input type="text" id="empRole" required placeholder="مثال: إداري، معيد، أستاذ"> -->
+                 <select id="empRole" required>
+                    <option value="">اختر الوظيفة</option>
+                    <option value="إداري">إداري</option>
+                    <option value="معيد">معيد</option>
+                    <option value="مدرس">مدرس</option>
+                    <option value="أستاذ">أستاذ</option>
+                    <option value="أستاذ مساعد">أستاذ مساعد</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>النوع *</label>
+                <select id="empGender" required>
+                    <option value="">اختر النوع</option>
+                    <option value="ذكر">ذكر</option>
+                    <option value="أنثى">أنثى</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>القسم / التخصص</label>
+                <input type="text" id="empDepartment" placeholder="مثال: قسم الهندسة، قسم إدارة الأعمال">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>ملاحظات إضافية</label>
+            <textarea id="empNotes" rows="3" placeholder="أي ملاحظات إضافية عن الموظف"></textarea>
+        </div>
+        
+        <div class="form-row">
+            <button type="submit" class="btn-green" id="submitBtn">حفظ الموظف</button>
+            <button type="button" class="btn-gray" onclick="clearForm()" id="cancelBtn" style="display:none;">إلغاء</button>
+            <button type="button" class="btn-purple" onclick="exportData()">تصدير البيانات</button>
+            <button type="button" class="btn-orange" onclick="document.getElementById('importFile').click()">استيراد بيانات</button>
+            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+        </div>
+    </form>
+</div>
+</div>
+
+<!-- قائمة الموظفين -->
+<div class="panel">
+<div class="panel-header">قائمة الموظفين</div>
+<div class="panel-body">
+
+<div class="table-controls">
+    <div>
+        <input type="text" id="empSearch" placeholder="بحث في الموظفين..." onkeyup="searchEmployees()" style="width:300px;">
+        <select id="roleFilter" onchange="searchEmployees()" style="width:150px; margin-right:10px;">
+            <option value="">جميع الوظائف</option>
+            <option value="إداري">إداري</option>
+            <option value="معيد">معيد</option>
+            <option value="أستاذ">أستاذ</option>
+            <option value="أستاذ مساعد">أستاذ مساعد</option>
+            <option value="مدرس">مدرس</option>
+        </select>
+        <select id="genderFilter" onchange="searchEmployees()" style="width:150px;">
+            <option value="">جميع الأنواع</option>
+            <option value="ذكر">ذكر</option>
+            <option value="أنثى">أنثى</option>
+        </select>
+    </div>
+    <div>
+        <button class="btn-blue" onclick="loadEmployeeList()">تحديث القائمة</button>
+    </div>
+</div>
+
+<div id="employeesList">
+    <!-- سيتم ملء القائمة هنا -->
+</div>
+
+</div>
+</div>
+
+</div>
+
+<!-- تبويب إدارة الأماكن -->
+<div id="places" class="tab-content">
+
+<div class="stats">
+    <div class="stat-card">
+        <div class="stat-value" id="totalPlaces">0</div>
+        <div class="stat-label">إجمالي الأماكن</div>
+    </div>
+</div>
+
+<!-- إضافة/تعديل مكان -->
+<div class="panel">
+<div class="panel-header" id="placeFormTitle">إضافة مكان جديد</div>
+<div class="panel-body">
+    <form id="placeForm">
+        <input type="hidden" id="placeId">
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>اسم المكان *</label>
+                <input type="text" id="placeName" required placeholder="مثال: مرسم 101">
+            </div>
+            <div class="form-group">
+                <label>السعة التقريبية</label>
+                <input type="number" id="placeCapacity" placeholder="عدد الطلاب">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label>المبنى</label>
+                <!-- <input type="text" id="placeBuilding" placeholder="مثال: المبنى الرئيسي، الطابق الثاني"> -->
+                <select id="placeBuilding">
+                    <option value="المبنى الرئيسي">المبنى الرئيسي</option>
+                    <option value="المبنى الفرعي">المبنى الفرعي</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>الحالة</label>
+                <select id="placeStatus">
+                    <option value="متاح">متاح</option>
+                    <option value="تحت الصيانة">تحت الصيانة</option>
+                    <option value="محجوز">محجوز</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label>ملاحظات إضافية</label>
+            <textarea id="placeNotes" rows="3" placeholder="أي ملاحظات إضافية عن المكان"></textarea>
+        </div>
+        
+        <div class="form-row">
+            <button type="submit" class="btn-green" id="placeSubmitBtn">حفظ المكان</button>
+            <button type="button" class="btn-gray" onclick="clearPlaceForm()" id="placeCancelBtn" style="display:none;">إلغاء</button>
+            <button type="button" class="btn-purple" onclick="exportPlacesData()">تصدير الأماكن</button>
+            <button type="button" class="btn-orange" onclick="document.getElementById('importPlaceFile').click()">استيراد أماكن</button>
+            <input type="file" id="importPlaceFile" accept=".json" style="display:none" onchange="importPlacesData(this)">
+        </div>
+    </form>
+</div>
+</div>
+
+<!-- قائمة الأماكن -->
+<div class="panel">
+<div class="panel-header">قائمة الأماكن</div>
+<div class="panel-body">
+
+<div class="table-controls">
+    <div>
+        <input type="text" id="placeSearch" placeholder="بحث في الأماكن..." onkeyup="searchPlaces()" style="width:300px;">
+        <select id="placeStatusFilter" onchange="searchPlaces()" style="width:150px; margin-right:10px;">
+            <option value="">جميع الحالات</option>
+            <option value="متاح">متاح</option>
+            <option value="تحت الصيانة">تحت الصيانة</option>
+            <option value="محجوز">محجوز</option>
+        </select>
+    </div>
+    <div>
+        <button class="btn-blue" onclick="loadPlacesList()">تحديث القائمة</button>
+    </div>
+</div>
+
+<div id="placesList">
+    <!-- سيتم ملء القائمة هنا -->
+</div>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+<!-- Footer -->
+<footer class="no-print">
+    <div class="footer-content">
+        <div class="website-link">
+            Developed by <a href="https://m-adel-tec.github.io/m-adel/" target="_blank" title="أنا اللي عملت البرنامج ده😉">Mohamed Adel</a>
+        </div>
+        <div class="copyright">
+            جميع الحقوق محفوظة © 2026 نظام توزيع المراقبين
+        </div>
+    </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

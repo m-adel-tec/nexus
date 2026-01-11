@@ -1,0 +1,444 @@
+body{
+    font-family: Segoe UI, Tahoma;
+    background:#e5e7eb;
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+}
+
+header{
+    background:#1e40af;
+    color:white;
+    padding:12px 25px;
+    font-size:20px;
+}
+
+.container{
+    padding:20px;
+    flex:1;
+}
+
+/* تبويبات التنقل */
+.tabs {
+    display:flex;
+    background:#f1f5f9;
+    border-radius:8px 8px 0 0;
+    overflow:hidden;
+    margin-bottom:0;
+}
+
+.tab-button {
+    padding:12px 25px;
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:600;
+    color:#475569;
+    flex:1;
+    text-align:center;
+}
+
+.tab-button.active {
+    background:#1e40af;
+    color:white;
+}
+
+.tab-content {
+    display:none;
+    background:white;
+    border:1px solid #cbd5e1;
+    border-top:none;
+    border-radius:0 0 8px 8px;
+    padding:20px;
+}
+
+.tab-content.active {
+    display:block;
+}
+
+.panel{
+    background:white;
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    margin-bottom:20px;
+}
+
+.panel-header{
+    background:#f1f5f9;
+    padding:10px 15px;
+    font-weight:bold;
+    border-bottom:1px solid #cbd5e1;
+}
+
+.panel-body{padding:15px;}
+
+.row{display:flex;gap:15px;flex-wrap:wrap;}
+
+input,select,textarea{
+    padding:8px;
+    border-radius:4px;
+    border:1px solid #94a3b8;
+    width:100%;
+    box-sizing:border-box;
+}
+
+.form-group{
+    margin-bottom:15px;
+    flex:1;
+    min-width:200px;
+}
+
+.form-row{
+    display:flex;
+    gap:15px;
+    margin-bottom:15px;
+}
+
+#search{
+    width:55%;
+    padding:10px;
+    font-size:16px;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+th,td{
+    border:1px solid #cbd5e1;
+    padding:8px;
+    text-align:center;
+}
+
+th{background:#f8fafc;}
+
+button{
+    padding:8px 16px;
+    border:none;
+    border-radius:5px;
+    cursor:pointer;
+    font-weight:600;
+    transition:background 0.3s;
+}
+
+.btn-blue{background:#2563eb;color:white;}
+.btn-blue:hover{background:#1d4ed8;}
+
+.btn-gray{background:#64748b;color:white;}
+.btn-gray:hover{background:#475569;}
+
+.btn-green{background:#16a34a;color:white;}
+.btn-green:hover{background:#15803d;}
+
+.btn-orange{background:#ea580c;color:white;}
+.btn-orange:hover{background:#c2410c;}
+
+.btn-red{background:#dc2626;color:white;}
+.btn-red:hover{background:#b91c1c;}
+
+.btn-purple{background:#7c3aed;color:white;}
+.btn-purple:hover{background:#6d28d9;}
+
+.result{
+    background:#f8fafc;
+    border:1px dashed #94a3b8;
+    padding:15px;
+    border-radius:6px;
+    max-height:400px;
+    overflow-y:auto;
+}
+.counter{
+    margin-top:10px;
+    font-weight:bold;
+    color:#1e40af;
+}
+
+.alert{
+    background:#fef3c7;
+    border:1px solid #f59e0b;
+    padding:10px;
+    border-radius:4px;
+    margin:10px 0;
+}
+
+.success{
+    background:#dcfce7;
+    border:1px solid #16a34a;
+    color:#166534;
+    padding:10px;
+    border-radius:4px;
+    margin:10px 0;
+}
+
+.committee-block{
+    background:#e0f2fe;
+    border:1px solid #0ea5e9;
+    border-radius:6px;
+    padding:12px;
+    margin-bottom:15px;
+}
+.committee-header{
+    font-weight:bold;
+    color:#075985;
+    margin-bottom:8px;
+}
+
+.print-only{display:none;}
+
+/* أدوات التحكم في الجدول */
+.table-controls{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+    flex-wrap:wrap;
+    gap:10px;
+}
+
+/* Footer Styles */
+footer {
+    background:#1e293b;
+    color:white;
+    padding:20px;
+    text-align:center;
+    margin-top:30px;
+}
+
+.footer-content {
+    max-width:1200px;
+    margin:0 auto;
+}
+
+.developer-info {
+    margin-bottom:10px;
+}
+
+.developer-info span {
+    font-weight:bold;
+    color:#60a5fa;
+}
+
+.website-link a {
+    color:#38bdf8;
+    text-decoration:none;
+    font-weight:600;
+}
+
+.website-link a:hover {
+    text-decoration:underline;
+    color:#7dd3fc;
+}
+
+.copyright {
+    margin-top:15px;
+    font-size:14px;
+    color:#94a3b8;
+}
+
+/* إحصائيات */
+.stats{
+    display:flex;
+    gap:15px;
+    margin:15px 0;
+    flex-wrap:wrap;
+}
+
+.stat-card{
+    background:white;
+    border:1px solid #cbd5e1;
+    border-radius:8px;
+    padding:15px;
+    flex:1;
+    min-width:150px;
+    text-align:center;
+}
+
+.stat-value{
+    font-size:24px;
+    font-weight:bold;
+    color:#1e40af;
+}
+
+.stat-label{
+    font-size:14px;
+    color:#64748b;
+    margin-top:5px;
+}
+
+@media print{
+    .no-print{display:none !important;}
+    .print-only{display:block !important;}
+    body{background:white;}
+    .panel{border:none; box-shadow:none;}
+    .result{border:1px solid #ccc;}
+    .committee-block{border:1px solid #666;}
+    footer{display:none;}
+}
+
+/* إضافة Pagination styles */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 15px;
+}
+
+#pageInfo {
+    font-weight: bold;
+    color: #1e40af;
+}
+
+/* تحسين الطباعة */
+@page {
+    size: A4;
+    margin: 1.5cm;
+    
+    @top-left {
+        content: "نظام توزيع المراقبين";
+        font-size: 12px;
+        color: #666;
+    }
+    
+    @top-right {
+        content: "صفحة " counter(page) " من " counter(pages);
+        font-size: 12px;
+        color: #666;
+    }
+}
+
+@media print {
+    body {
+        font-size: 12pt;
+        line-height: 1.5;
+    }
+    
+    .committee-block {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    .committee-header {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+    
+    h1, h2, h3 {
+        page-break-after: avoid;
+    }
+    
+    table {
+        page-break-inside: auto;
+    }
+    
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    
+    /* الهيدر في كل صفحة */
+    .print-header {
+        display: block !important;
+        text-align: center;
+        border-bottom: 2px solid #1e40af;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        page-break-after: avoid;
+    }
+    
+    .print-footer {
+        display: block !important;
+        text-align: center;
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
+        margin-top: 20px;
+        page-break-before: avoid;
+    }
+}
+
+/* إضافة Pagination styles */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 15px;
+}
+
+#pageInfo {
+    font-weight: bold;
+    color: #1e40af;
+}
+
+/* تحسين الطباعة */
+@page {
+    size: A4;
+    margin: 1.5cm;
+    
+    @top-left {
+        content: "نظام توزيع المراقبين";
+        font-size: 12px;
+        color: #666;
+    }
+    
+    @top-right {
+        content: "صفحة " counter(page) " من " counter(pages);
+        font-size: 12px;
+        color: #666;
+    }
+}
+
+@media print {
+    body {
+        font-size: 12pt;
+        line-height: 1.5;
+    }
+    
+    .committee-block {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    
+    .committee-header {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+    
+    h1, h2, h3 {
+        page-break-after: avoid;
+    }
+    
+    table {
+        page-break-inside: auto;
+    }
+    
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    
+    /* الهيدر في كل صفحة */
+    .print-header {
+        display: block !important;
+        text-align: center;
+        border-bottom: 2px solid #1e40af;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        page-break-after: avoid;
+    }
+    
+    .print-footer {
+        display: block !important;
+        text-align: center;
+        border-top: 1px solid #ccc;
+        padding-top: 10px;
+        margin-top: 20px;
+        page-break-before: avoid;
+    }
+}
