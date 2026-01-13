@@ -1,4 +1,46 @@
 // ===== نظام إدارة الموظفين والأماكن =====
+// ===== دالة لإزالة التكرارات =====
+function removeDuplicatesFromStorage() {
+    console.log('🔄 فحص وإزالة التكرارات...');
+    
+    // للموظفين
+    const employees = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    const uniqueEmployees = [];
+    const seenEmployees = new Set();
+    
+    employees.forEach(emp => {
+        // استخدام الاسم والوظيفة كمعرف فريد
+        const uniqueKey = `${emp.name}-${emp.role}-${emp.gender}`;
+        if (!seenEmployees.has(uniqueKey)) {
+            seenEmployees.add(uniqueKey);
+            uniqueEmployees.push(emp);
+        }
+    });
+    
+    // للأماكن
+    const places = JSON.parse(localStorage.getItem(PLACES_STORAGE_KEY) || '[]');
+    const uniquePlaces = [];
+    const seenPlaces = new Set();
+    
+    places.forEach(place => {
+        const uniqueKey = `${place.name}-${place.building}`;
+        if (!seenPlaces.has(uniqueKey)) {
+            seenPlaces.add(uniqueKey);
+            uniquePlaces.push(place);
+        }
+    });
+    
+    // حفظ البيانات بعد إزالة التكرارات
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(uniqueEmployees));
+    localStorage.setItem(PLACES_STORAGE_KEY, JSON.stringify(uniquePlaces));
+    
+    console.log(`✅ تم تنظيف:
+    - الموظفين: ${employees.length} → ${uniqueEmployees.length}
+    - الأماكن: ${places.length} → ${uniquePlaces.length}`);
+    
+    return { uniqueEmployees, uniquePlaces };
+}
+
 // مفاتيح التخزين في localStorage
 const STORAGE_KEY = 'employees_data';
 const PLACES_STORAGE_KEY = 'places_data';
@@ -22,6 +64,33 @@ let currentRoleFilter = '';
 let selectedEmployeeIds = new Set();
 let committeesData = [];
 
+
+// دالة لتحميل مكتبة SheetJS ديناميكياً
+function loadSheetJS() {
+    return new Promise((resolve, reject) => {
+        if (window.XLSX) {
+            resolve(window.XLSX);
+            return;
+        }
+        
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+        script.onload = () => resolve(window.XLSX);
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
+}
+
+
+
+
+
+
+
+
+
+
+
 // ===== تحميل البيانات =====
 function loadEmployeesFromStorage() {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -41,21 +110,63 @@ function loadPlacesFromStorage() {
     }
 }
 
-function saveEmployeesToStorage(employees) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(employees));
-    updateStatistics(employees);
+function saveEmployeesToStorage(employeesList) {
+    // فحص التكرارات قبل الحفظ
+    const uniqueEmployees = [];
+    const seen = new Set();
+    
+    employeesList.forEach(emp => {
+        const uniqueKey = `${emp.name}-${emp.role}-${emp.gender}`;
+        if (!seen.has(uniqueKey)) {
+            seen.add(uniqueKey);
+            uniqueEmployees.push(emp);
+        } else {
+            console.warn('⚠️ تم تجاهل موظف مكرر:', emp.name);
+        }
+    });
+    
+    // حفظ البيانات النظيفة
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(uniqueEmployees));
+    updateStatistics(uniqueEmployees);
+    
+    // تحديث المتغير العام
+    employees = uniqueEmployees;
+    
+    console.log('💾 تم حفظ', uniqueEmployees.length, 'موظف');
 }
 
-function savePlacesToStorage(places) {
-    localStorage.setItem(PLACES_STORAGE_KEY, JSON.stringify(places));
-    updatePlacesStatistics(places);
+function savePlacesToStorage(placesList) {
+    // نفس الفكرة للأماكن
+    const uniquePlaces = [];
+    const seen = new Set();
+    
+    placesList.forEach(place => {
+        const uniqueKey = `${place.name}-${place.building}`;
+        if (!seen.has(uniqueKey)) {
+            seen.add(uniqueKey);
+            uniquePlaces.push(place);
+        } else {
+            console.warn('⚠️ تم تجاهل مكان مكرر:', place.name);
+        }
+    });
+    
+    localStorage.setItem(PLACES_STORAGE_KEY, JSON.stringify(uniquePlaces));
+    updatePlacesStatistics(uniquePlaces);
+    places = uniquePlaces;
 }
 
 // ===== تهيئة التطبيق =====
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 بدء تحميل النظام...');
+    
+    // تنظيف التكرارات أولاً
+    removeDuplicatesFromStorage();
+    
+    // تحميل البيانات بعد التنظيف
     employees = loadEmployeesFromStorage();
     places = loadPlacesFromStorage();
     
+    // ... باقي الكود كما هو
     setTodayDate();
     buildCommittees();
     updateStatistics(employees);
@@ -556,144 +667,449 @@ function searchPlaces() {
     loadPlacesList();
 }
 
-// ===== استيراد وتصدير البيانات =====
-function exportData() {
-    const dataStr = JSON.stringify(employees, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = 'موظفين_المراقبة.json';
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+// ===== تصدير Excel للموظفين =====
+async function exportDataExcel() {
+    try {
+        const XLSX = await loadSheetJS();
+        
+        // تحويل البيانات إلى ورقة عمل
+        const worksheet = XLSX.utils.json_to_sheet(employees.map(emp => ({
+            'الرقم': emp.id,
+            'الاسم': emp.name,
+            'الوظيفة': emp.role,
+            'النوع': emp.gender,
+            'القسم': emp.department || '',
+            'ملاحظات': emp.notes || ''
+        })));
+        
+        // إنشاء مصنف جديد
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'الموظفين');
+        
+        // توليد ملف Excel
+        XLSX.writeFile(workbook, 'موظفين_المراقبة.xlsx');
+        
+        showMessage('تم تصدير البيانات إلى ملف Excel بنجاح', 'success');
+    } catch (error) {
+        console.error('خطأ في تصدير Excel:', error);
+        alert('حدث خطأ أثناء تصدير ملف Excel. تأكد من اتصال الإنترنت لتحميل المكتبة المطلوبة.');
+    }
 }
 
-function exportPlacesData() {
-    const dataStr = JSON.stringify(places, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    const exportFileDefaultName = 'أماكن_اللجان.json';
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+// ===== تصدير CSV للموظفين =====
+function exportDataCSV() {
+    try {
+        // رأس الأعمدة
+        const headers = ['الرقم', 'الاسم', 'الوظيفة', 'النوع', 'القسم', 'ملاحظات'];
+        
+        // البيانات
+        const csvData = employees.map(emp => [
+            emp.id,
+            emp.name,
+            emp.role,
+            emp.gender,
+            emp.department || '',
+            emp.notes || ''
+        ]);
+        
+        // إنشاء محتوى CSV
+        const csvContent = [
+            headers.join(','),
+            ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+        
+        // إنشاء ملف CSV
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'موظفين_المراقبة.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showMessage('تم تصدير البيانات إلى ملف CSV بنجاح', 'success');
+    } catch (error) {
+        console.error('خطأ في تصدير CSV:', error);
+        alert('حدث خطأ أثناء تصدير ملف CSV.');
+    }
 }
 
-function importData(input) {
+// ===== تصدير Excel للأماكن =====
+async function exportPlacesExcel() {
+    try {
+        const XLSX = await loadSheetJS();
+        
+        const worksheet = XLSX.utils.json_to_sheet(places.map(place => ({
+            'الرقم': place.id,
+            'اسم المكان': place.name,
+            'السعة': place.capacity || '',
+            'المبنى': place.building || '',
+            'الحالة': place.status,
+            'ملاحظات': place.notes || ''
+        })));
+        
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'الأماكن');
+        
+        XLSX.writeFile(workbook, 'أماكن_اللجان.xlsx');
+        
+        showPlaceMessage('تم تصدير الأماكن إلى ملف Excel بنجاح', 'success');
+    } catch (error) {
+        console.error('خطأ في تصدير Excel للأماكن:', error);
+        alert('حدث خطأ أثناء تصدير ملف Excel للأماكن.');
+    }
+}
+
+// ===== تصدير CSV للأماكن =====
+function exportPlacesCSV() {
+    try {
+        const headers = ['الرقم', 'اسم المكان', 'السعة', 'المبنى', 'الحالة', 'ملاحظات'];
+        
+        const csvData = places.map(place => [
+            place.id,
+            place.name,
+            place.capacity || '',
+            place.building || '',
+            place.status,
+            place.notes || ''
+        ]);
+        
+        const csvContent = [
+            headers.join(','),
+            ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+        
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'أماكن_اللجان.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showPlaceMessage('تم تصدير الأماكن إلى ملف CSV بنجاح', 'success');
+    } catch (error) {
+        console.error('خطأ في تصدير CSV للأماكن:', error);
+        alert('حدث خطأ أثناء تصدير ملف CSV للأماكن.');
+    }
+}
+
+
+
+
+
+// ===== استيراد بيانات الموظفين من Excel/CSV =====
+async function importData(input) {
     const file = input.files[0];
     if (!file) return;
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const importedData = JSON.parse(e.target.result);
-            
-            if (!Array.isArray(importedData)) {
-                throw new Error('تنسيق الملف غير صحيح');
-            }
-            
-            // التحقق من صحة البيانات
-            const isValid = importedData.every(item => item.name && item.role && item.gender);
-            if (!isValid) {
-                alert('الملف يحتوي على بيانات غير صالحة');
-                return;
-            }
-            
-            if (confirm(`سيتم استيراد ${importedData.length} موظف. سيتم حذف جميع البيانات الحالية! هل تريد المتابعة؟`)) {
-                // أولاً: نمسح كل الموظفين الحاليين
-                employees = [];
-                
-                // نبدأ الـID من 1 تاني
-                let nextId = 1;
-                
-                importedData.forEach(item => {
-                    // نعطي ID جديد
-                    item.id = nextId++;
-                    
-                    // نضيف حقل isActive لو مش موجود
-                    if (item.isActive === undefined) {
-                        item.isActive = true;
-                    }
-                    
-                    employees.push(item);
-                });
-                
-                // نحفظ ونحدث العرض
-                saveEmployeesToStorage(employees);
-                loadEmployeeList();
-                filterEmployees();
-                showMessage(`تم استيراد ${importedData.length} موظف بنجاح`, 'success');
-            }
-        } catch (error) {
-            alert('خطأ في قراءة الملف: ' + error.message);
-        }
-    };
+    const fileExt = file.name.split('.').pop().toLowerCase();
     
-    reader.readAsText(file);
+    try {
+        let importedData;
+        
+        if (fileExt === 'csv') {
+            importedData = await readCSVFile(file);
+        } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+            importedData = await readExcelFile(file);
+        } else {
+            alert('نوع الملف غير مدعوم. يرجى استخدام ملف Excel (.xlsx, .xls) أو CSV.');
+            input.value = '';
+            return;
+        }
+        
+        if (!importedData || importedData.length === 0) {
+            alert('الملف فارغ أو لا يحتوي على بيانات صالحة.');
+            input.value = '';
+            return;
+        }
+        
+        // تحقق من صحة البيانات
+        const validationResult = validateEmployeeData(importedData);
+        if (!validationResult.isValid) {
+            alert(`خطأ في البيانات:\n${validationResult.errors.join('\n')}\n\nيرجى تعديل الملف وحاول مرة أخرى.`);
+            input.value = '';
+            return;
+        }
+        
+        if (confirm(`سيتم استيراد ${importedData.length} موظف. هل تريد المتابعة؟`)) {
+            const existingIds = new Set(employees.map(e => e.id));
+            let nextId = existingIds.size > 0 ? Math.max(...existingIds) + 1 : 1;
+            
+            importedData.forEach(item => {
+                if (!item.id || existingIds.has(item.id)) {
+                    item.id = nextId++;
+                }
+                employees.push(item);
+            });
+            
+            saveEmployeesToStorage(employees);
+            loadEmployeeList();
+            filterEmployees();
+            showMessage(`تم استيراد ${importedData.length} موظف بنجاح`, 'success');
+        }
+    } catch (error) {
+        console.error('خطأ في استيراد الملف:', error);
+        alert(`حدث خطأ أثناء قراءة الملف:\n${error.message}\n\nتأكد من:\n1. صيغة الملف صحيحة\n2. البيانات مرتبة بشكل صحيح\n3. الملف غير تالف`);
+    }
+    
     input.value = '';
 }
 
-function importPlacesData(input) {
+// ===== استيراد بيانات الأماكن من Excel/CSV =====
+async function importPlacesData(input) {
     const file = input.files[0];
     if (!file) return;
     
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const importedData = JSON.parse(e.target.result);
-            
-            if (!Array.isArray(importedData)) {
-                throw new Error('تنسيق الملف غير صحيح');
-            }
-            
-            // التحقق من البيانات الأساسية
-            const isValid = importedData.every(item => item.name);
-            if (!isValid) {
-                alert('الملف يحتوي على بيانات غير صالحة');
-                return;
-            }
-            
-            if (confirm(`سيتم استيراد ${importedData.length} مكان. سيتم حذف جميع الأماكن الحالية! هل تريد المتابعة؟`)) {
-                // أولاً: نمسح كل الأماكن الحالية
-                places = [];
-                
-                // نبدأ الـID من 1 تاني
-                let nextId = 1;
-                
-                importedData.forEach(item => {
-                    // نعطي ID جديد
-                    item.id = nextId++;
-                    
-                    // نضمن وجود الحقول الأساسية
-                    if (item.status === undefined) {
-                        item.status = 'متاح';
-                    }
-                    if (item.capacity === undefined) {
-                        item.capacity = null;
-                    }
-                    if (item.building === undefined) {
-                        item.building = '';
-                    }
-                    if (item.notes === undefined) {
-                        item.notes = '';
-                    }
-                    
-                    places.push(item);
-                });
-                
-                // نحفظ ونحدث العرض
-                savePlacesToStorage(places);
-                loadPlacesList();
-                buildCommittees();
-                showPlaceMessage(`تم استيراد ${importedData.length} مكان بنجاح`, 'success');
-            }
-        } catch (error) {
-            alert('خطأ في قراءة الملف: ' + error.message);
-        }
-    };
+    const fileExt = file.name.split('.').pop().toLowerCase();
     
-    reader.readAsText(file);
+    try {
+        let importedData;
+        
+        if (fileExt === 'csv') {
+            importedData = await readCSVFile(file, 'places');
+        } else if (fileExt === 'xlsx' || fileExt === 'xls') {
+            importedData = await readExcelFile(file, 'places');
+        } else {
+            alert('نوع الملف غير مدعوم. يرجى استخدام ملف Excel (.xlsx, .xls) أو CSV.');
+            input.value = '';
+            return;
+        }
+        
+        if (!importedData || importedData.length === 0) {
+            alert('الملف فارغ أو لا يحتوي على بيانات صالحة.');
+            input.value = '';
+            return;
+        }
+        
+        const validationResult = validatePlaceData(importedData);
+        if (!validationResult.isValid) {
+            alert(`خطأ في البيانات:\n${validationResult.errors.join('\n')}\n\nيرجى تعديل الملف وحاول مرة أخرى.`);
+            input.value = '';
+            return;
+        }
+        
+        if (confirm(`سيتم استيراد ${importedData.length} مكان. هل تريد المتابعة؟`)) {
+            const existingIds = new Set(places.map(p => p.id));
+            let nextId = existingIds.size > 0 ? Math.max(...existingIds) + 1 : 1;
+            
+            importedData.forEach(item => {
+                if (!item.id || existingIds.has(item.id)) {
+                    item.id = nextId++;
+                }
+                places.push(item);
+            });
+            
+            savePlacesToStorage(places);
+            loadPlacesList();
+            buildCommittees();
+            showPlaceMessage(`تم استيراد ${importedData.length} مكان بنجاح`, 'success');
+        }
+    } catch (error) {
+        console.error('خطأ في استيراد الملف:', error);
+        alert(`حدث خطأ أثناء قراءة الملف:\n${error.message}\n\nتأكد من:\n1. صيغة الملف صحيحة\n2. البيانات مرتبة بشكل صحيح\n3. الملف غير تالف`);
+    }
+    
     input.value = '';
+}
+
+// ===== دوال مساعدة للقراءة =====
+async function readCSVFile(file, type = 'employees') {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                const content = e.target.result;
+                const lines = content.split('\n').filter(line => line.trim() !== '');
+                
+                if (lines.length < 2) {
+                    reject(new Error('الملف لا يحتوي على بيانات كافية'));
+                    return;
+                }
+                
+                // قراءة العناوين (السطر الأول)
+                const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+                
+                // تحليل البيانات
+                const data = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const values = parseCSVLine(lines[i]);
+                    
+                    if (type === 'employees') {
+                        const employee = {
+                            id: parseInt(values[0]) || 0,
+                            name: values[1] || '',
+                            role: values[2] || '',
+                            gender: values[3] || 'ذكر',
+                            department: values[4] || '',
+                            notes: values[5] || ''
+                        };
+                        data.push(employee);
+                    } else {
+                        const place = {
+                            id: parseInt(values[0]) || 0,
+                            name: values[1] || '',
+                            capacity: values[2] ? parseInt(values[2]) : null,
+                            building: values[3] || '',
+                            status: values[4] || 'متاح',
+                            notes: values[5] || ''
+                        };
+                        data.push(place);
+                    }
+                }
+                
+                resolve(data);
+            } catch (error) {
+                reject(new Error(`خطأ في تحليل ملف CSV: ${error.message}`));
+            }
+        };
+        
+        reader.onerror = () => reject(new Error('خطأ في قراءة الملف'));
+        reader.readAsText(file, 'UTF-8');
+    });
+}
+
+function parseCSVLine(line) {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            values.push(current.trim());
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    
+    values.push(current.trim());
+    return values.map(v => v.replace(/^"|"$/g, ''));
+}
+
+async function readExcelFile(file, type = 'employees') {
+    const XLSX = await loadSheetJS();
+    
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                
+                // الحصول على الورقة الأولى
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // تحويل إلى JSON
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                
+                if (type === 'employees') {
+                    const employeesData = jsonData.map(row => ({
+                        id: parseInt(row['الرقم']) || 0,
+                        name: row['الاسم'] || '',
+                        role: row['الوظيفة'] || '',
+                        gender: row['النوع'] || 'ذكر',
+                        department: row['القسم'] || '',
+                        notes: row['ملاحظات'] || ''
+                    }));
+                    resolve(employeesData);
+                } else {
+                    const placesData = jsonData.map(row => ({
+                        id: parseInt(row['الرقم']) || 0,
+                        name: row['اسم المكان'] || '',
+                        capacity: row['السعة'] ? parseInt(row['السعة']) : null,
+                        building: row['المبنى'] || '',
+                        status: row['الحالة'] || 'متاح',
+                        notes: row['ملاحظات'] || ''
+                    }));
+                    resolve(placesData);
+                }
+            } catch (error) {
+                reject(new Error(`خطأ في تحليل ملف Excel: ${error.message}`));
+            }
+        };
+        
+        reader.onerror = () => reject(new Error('خطأ في قراءة الملف'));
+        reader.readAsArrayBuffer(file);
+    });
+}
+
+// ===== دوال التحقق من صحة البيانات =====
+function validateEmployeeData(data) {
+    const errors = [];
+    
+    if (!Array.isArray(data)) {
+        errors.push('البيانات يجب أن تكون في شكل جدول');
+        return { isValid: false, errors };
+    }
+    
+    data.forEach((item, index) => {
+        const rowNum = index + 2;
+        
+        if (!item.name || item.name.trim() === '') {
+            errors.push(`الصف ${rowNum}: حقل الاسم مطلوب`);
+        }
+        
+        if (!item.role || item.role.trim() === '') {
+            errors.push(`الصف ${rowNum}: حقل الوظيفة مطلوب`);
+        }
+        
+        if (!item.gender || !['ذكر', 'أنثى'].includes(item.gender)) {
+            errors.push(`الصف ${rowNum}: النوع يجب أن يكون "ذكر" أو "أنثى"`);
+        }
+        
+        if (item.id && (isNaN(item.id) || item.id <= 0)) {
+            errors.push(`الصف ${rowNum}: الرقم يجب أن يكون رقماً صحيحاً موجباً`);
+        }
+    });
+    
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
+}
+
+function validatePlaceData(data) {
+    const errors = [];
+    
+    if (!Array.isArray(data)) {
+        errors.push('البيانات يجب أن تكون في شكل جدول');
+        return { isValid: false, errors };
+    }
+    
+    data.forEach((item, index) => {
+        const rowNum = index + 2;
+        
+        if (!item.name || item.name.trim() === '') {
+            errors.push(`الصف ${rowNum}: حقل اسم المكان مطلوب`);
+        }
+        
+        if (!item.status || !['متاح', 'تحت الصيانة', 'محجوز'].includes(item.status)) {
+            errors.push(`الصف ${rowNum}: الحالة يجب أن تكون "متاح"، "تحت الصيانة"، أو "محجوز"`);
+        }
+        
+        if (item.id && (isNaN(item.id) || item.id <= 0)) {
+            errors.push(`الصف ${rowNum}: الرقم يجب أن يكون رقماً صحيحاً موجباً`);
+        }
+        
+        if (item.capacity && (isNaN(item.capacity) || item.capacity < 0)) {
+            errors.push(`الصف ${rowNum}: السعة يجب أن تكون رقماً صحيحاً موجباً`);
+        }
+    });
+    
+    return {
+        isValid: errors.length === 0,
+        errors: errors
+    };
 }
 
 // ===== التوزيع الذكي =====
@@ -997,272 +1413,209 @@ function updateStatistics(employees) {
 
 function updatePlacesStatistics(places) {
     document.getElementById('totalPlaces').textContent = places.length;
-
 }
 
+function cleanupData() {
+    if (confirm('هل تريد تنظيف جميع البيانات المكررة؟ هذا الإجراء لا يمكن التراجع عنه.')) {
+        removeDuplicatesFromStorage();
+        alert('✅ تم تنظيف البيانات المكررة بنجاح');
+        location.reload(); // إعادة تحميل الصفحة
+    }
+}
 
-// ================= PROTECTION AGAINST DEVTOOLS =================
-(function() {
-    'use strict';
-    
-    // متغير لتتبع حالة الحماية
-    let devToolsOpened = false;
-    
-    // حالة الحماية الافتراضية (تفعيل/تعطيل)
-    const protectionEnabled = true;
-    
-    // لا تفعل الحماية في بيئة التطوير المحلي
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1';
-    
-    if (!protectionEnabled || isLocalhost) {
-        return; // لا تفعل الحماية
+// ===== تصدير البيانات للموظفين (Excel) =====
+async function exportDataExcel() {
+    try {
+        // تحميل مكتبة SheetJS
+        const XLSX = await loadSheetJS();
+        
+        // تحضير البيانات
+        const worksheetData = employees.map(emp => ({
+            'الرقم': emp.id,
+            'الاسم': emp.name,
+            'الوظيفة': emp.role,
+            'النوع': emp.gender,
+            'القسم': emp.department || '',
+            'ملاحظات': emp.notes || ''
+        }));
+        
+        // إنشاء ورقة العمل
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        
+        // إنشاء المصنف
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'الموظفين');
+        
+        // حفظ الملف
+        XLSX.writeFile(workbook, 'موظفين_المراقبة.xlsx');
+        
+        alert('✅ تم تصدير البيانات إلى ملف Excel بنجاح');
+    } catch (error) {
+        console.error('خطأ في التصدير:', error);
+        alert('❌ حدث خطأ في التصدير. تأكد من اتصال الإنترنت.');
     }
-    
-    // طرق اكتشاف فتح أدوات المطورين
-    function detectDevTools() {
-        const threshold = 160; // العتبة لاكتشاف DevTools
+}
+
+// ===== تصدير البيانات للأماكن (Excel) =====
+async function exportPlacesExcel() {
+    try {
+        const XLSX = await loadSheetJS();
         
-        // الطريقة 1: الفرق بين الأبعاد الداخلية والخارجية
-        const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-        const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+        const worksheetData = places.map(place => ({
+            'الرقم': place.id,
+            'اسم المكان': place.name,
+            'السعة': place.capacity || '',
+            'المبنى': place.building || '',
+            'الحالة': place.status,
+            'ملاحظات': place.notes || ''
+        }));
         
-        // الطريقة 2: تحقق من وجود أدوات المطورين
-        const devtools = /./;
-        devtools.toString = function() {
-            devToolsOpened = true;
-        };
-        console.log('%c', devtools);
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'الأماكن');
         
-        // الطريقة 3: وقت التنفيذ (أدوات المطورين تبطئ التنفيذ)
-        let start = performance.now();
-        debugger;
-        let end = performance.now();
-        const debuggerTime = end - start > 100;
+        XLSX.writeFile(workbook, 'أماكن_اللجان.xlsx');
         
-        return widthThreshold || heightThreshold || devToolsOpened || debuggerTime;
+        alert('✅ تم تصدير الأماكن إلى ملف Excel بنجاح');
+    } catch (error) {
+        console.error('خطأ في التصدير:', error);
+        alert('❌ حدث خطأ في التصدير.');
     }
-    
-    // إنشاء رسالة الحماية
-    function createProtectionMessage() {
-        const overlay = document.createElement('div');
-        overlay.id = 'devtools-protection-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, #0d3b66, #1c77c3);
-            color: white;
-            z-index: 999999;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            text-align: center;
-            padding: 20px;
-            font-family: 'Cairo', sans-serif;
-        `;
+}
+
+// ===== تصدير CSV للموظفين =====
+function exportDataCSV() {
+    try {
+        // رأس الأعمدة
+        const headers = ['الرقم', 'الاسم', 'الوظيفة', 'النوع', 'القسم', 'ملاحظات'];
         
-        const content = document.createElement('div');
-        content.style.cssText = `
-            max-width: 600px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 20px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-        `;
+        // البيانات
+        const csvData = employees.map(emp => [
+            emp.id,
+            `"${emp.name}"`,
+            `"${emp.role}"`,
+            `"${emp.gender}"`,
+            `"${emp.department || ''}"`,
+            `"${emp.notes || ''}"`
+        ]);
         
-        const icon = document.createElement('i');
-        icon.className = 'fas fa-shield-alt';
-        icon.style.cssText = `
-            font-size: 80px;
-            margin-bottom: 20px;
-            color: #ff6b6b;
-        `;
+        // إنشاء محتوى CSV
+        const csvContent = [
+            headers.join(','),
+            ...csvData.map(row => row.join(','))
+        ].join('\n');
         
-        const title = document.createElement('h1');
-        title.textContent = '⚠️ الحماية مفعلة ⚠️';
-        title.style.cssText = `
-            font-size: 32px;
-            margin-bottom: 20px;
-            color: #ffd166;
-        `;
+        // إنشاء ملف CSV
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'موظفين_المراقبة.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         
-        const message = document.createElement('p');
-        message.textContent = 'عذراً، لا يمكن فتح أدوات المطورين على هذا الموقع. هذه الميزة موجودة لحماية حقوق الملكية الفكرية والمحتوى الحصري للشركة.';
-        message.style.cssText = `
-            font-size: 18px;
-            margin-bottom: 25px;
-            line-height: 1.6;
-        `;
-        
-        const contact = document.createElement('p');
-        contact.textContent = 'للتواصل أو الاستفسار: 01092217756';
-        contact.style.cssText = `
-            font-size: 16px;
-            color: #aad4ff;
-            margin-top: 20px;
-        `;
-        
-        content.appendChild(icon);
-        content.appendChild(title);
-        content.appendChild(message);
-        content.appendChild(contact);
-        overlay.appendChild(content);
-        
-        return overlay;
+        alert('✅ تم تصدير البيانات إلى ملف CSV بنجاح');
+    } catch (error) {
+        console.error('خطأ في تصدير CSV:', error);
+        alert('❌ حدث خطأ في التصدير.');
     }
-    
-    // منع حق النقر بزر الماوس الأيمن
-    document.addEventListener('contextmenu', function(e) {
-        if (protectionEnabled && !isLocalhost) {
-            e.preventDefault();
-            
-            // عرض رسالة تنبيه صغيرة
-            const warning = document.createElement('div');
-            warning.textContent = '❌ غير مسموح بنسخ المحتوى';
-            warning.style.cssText = `
-                position: fixed;
-                top: ${e.clientY}px;
-                left: ${e.clientX}px;
-                background: #ff4757;
-                color: white;
-                padding: 8px 15px;
-                border-radius: 5px;
-                font-size: 14px;
-                z-index: 10000;
-                animation: fadeOut 2s forwards;
-            `;
-            
-            // إضافة أنيميشن
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeOut {
-                    0% { opacity: 1; transform: translateY(0); }
-                    70% { opacity: 1; transform: translateY(-20px); }
-                    100% { opacity: 0; transform: translateY(-20px); }
-                }
-            `;
-            document.head.appendChild(style);
-            
-            document.body.appendChild(warning);
-            setTimeout(() => warning.remove(), 2000);
-        }
-    });
-    
-    // منع اختصارات لوحة المفاتيح
-    document.addEventListener('keydown', function(e) {
-        // منع Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U, F12
-        if (protectionEnabled && !isLocalhost) {
-            const blockedKeys = [
-                e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j' || e.key === 'C' || e.key === 'c'),
-                e.ctrlKey && (e.key === 'U' || e.key === 'u'),
-                e.key === 'F12',
-                e.key === 'F11' && e.ctrlKey
-            ];
-            
-            if (blockedKeys.some(Boolean)) {
-                e.preventDefault();
-                
-                // عرض رسالة تنبيه
-                const warning = document.createElement('div');
-                warning.textContent = '🚫 هذا الأمر غير مسموح به';
-                warning.style.cssText = `
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                    background: #ff4757;
-                    color: white;
-                    padding: 15px 30px;
-                    border-radius: 10px;
-                    font-size: 18px;
-                    z-index: 10000;
-                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-                `;
-                
-                document.body.appendChild(warning);
-                setTimeout(() => warning.remove(), 2000);
+}
+
+// ===== تصدير CSV للأماكن =====
+function exportPlacesCSV() {
+    try {
+        const headers = ['الرقم', 'اسم المكان', 'السعة', 'المبنى', 'الحالة', 'ملاحظات'];
+        
+        const csvData = places.map(place => [
+            place.id,
+            `"${place.name}"`,
+            place.capacity || '',
+            `"${place.building || ''}"`,
+            `"${place.status}"`,
+            `"${place.notes || ''}"`
+        ]);
+        
+        const csvContent = [
+            headers.join(','),
+            ...csvData.map(row => row.join(','))
+        ].join('\n');
+        
+        const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'أماكن_اللجان.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        alert('✅ تم تصدير الأماكن إلى ملف CSV بنجاح');
+    } catch (error) {
+        console.error('خطأ في تصدير CSV:', error);
+        alert('❌ حدث خطأ في التصدير.');
+    }
+}
+
+// ===== تنزيل نموذج Excel للاستيراد =====
+async function downloadTemplate() {
+    try {
+        const XLSX = await loadSheetJS();
+        
+        // بيانات نموذجية
+        const templateData = [
+            {
+                'الرقم': 1,
+                'الاسم': 'أحمد محمد',
+                'الوظيفة': 'معيد',
+                'النوع': 'ذكر',
+                'القسم': 'قسم الحاسبات',
+                'ملاحظات': ''
+            },
+            {
+                'الرقم': 2,
+                'اسم المكان': 'قاعة 101',
+                'السعة': 50,
+                'المبنى': 'المبنى الرئيسي',
+                'الحالة': 'متاح',
+                'ملاحظات': 'قاعة امتحانات'
             }
-        }
-    });
-    
-    // مراقبة فتح أدوات المطورين
-    function monitorDevTools() {
-        if (detectDevTools()) {
-            if (!document.getElementById('devtools-protection-overlay')) {
-                const overlay = createProtectionMessage();
-                document.body.appendChild(overlay);
-                
-                // تعطيل التفاعل مع الصفحة
-                document.body.style.overflow = 'hidden';
-                
-                // إغلاق أي DevTools مفتوحة
-                setTimeout(() => {
-                    window.location.href = window.location.href;
-                }, 3000);
-            }
-        } else {
-            const overlay = document.getElementById('devtools-protection-overlay');
-            if (overlay) {
-                overlay.remove();
-                document.body.style.overflow = '';
-            }
-        }
-    }
-    
-    // بدء المراقبة
-    setInterval(monitorDevTools, 1000);
-    
-    // حماية إضافية: منع السحب والإسقاط للصور
-    document.addEventListener('dragstart', function(e) {
-        if (protectionEnabled && !isLocalhost && e.target.tagName === 'IMG') {
-            e.preventDefault();
-        }
-    });
-    
-    // منع اختيار النصوص (اختياري)
-    if (protectionEnabled && !isLocalhost) {
-        document.addEventListener('selectstart', function(e) {
-            e.preventDefault();
-        });
+        ];
         
-        document.body.style.userSelect = 'none';
-        document.body.style.webkitUserSelect = 'none';
-        document.body.style.msUserSelect = 'none';
-        document.body.style.mozUserSelect = 'none';
-    }
-    
-    // حماية ضد فحص العناصر عبر console
-    Object.defineProperty(window, 'console', {
-        get: function() {
-            if (protectionEnabled && !isLocalhost) {
-                return {
-                    log: function() {
-                        // لا تفعل شيء
-                    },
-                    warn: function() {
-                        // لا تفعل شيء
-                    },
-                    error: function() {
-                        // لا تفعل شيء
-                    },
-                    info: function() {
-                        // لا تفعل شيء
-                    },
-                    clear: function() {
-                        // لا تفعل شيء
-                    }
-                };
+        // إنشاء ورقتين
+        const employeeWorksheet = XLSX.utils.json_to_sheet([
+            {
+                'الرقم': '(اتركه فارغاً لتعيين رقم تلقائي)',
+                'الاسم': 'أحمد محمد',
+                'الوظيفة': 'معيد',
+                'النوع': 'ذكر',
+                'القسم': 'قسم الحاسبات',
+                'ملاحظات': ''
             }
-            return console;
-        }
-    });
-    
-    console.log('✅ حماية الموقع مفعلة');
-})();
-// ================= END PROTECTION =================
+        ]);
+        
+        const placeWorksheet = XLSX.utils.json_to_sheet([
+            {
+                'الرقم': '(اتركه فارغاً لتعيين رقم تلقائي)',
+                'اسم المكان': 'قاعة 101',
+                'السعة': 50,
+                'المبنى': 'المبنى الرئيسي',
+                'الحالة': 'متاح',
+                'ملاحظات': 'قاعة امتحانات'
+            }
+        ]);
+        
+        // إنشاء المصنف
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, employeeWorksheet, 'نموذج_موظفين');
+        XLSX.utils.book_append_sheet(workbook, placeWorksheet, 'نموذج_أماكن');
+        
+        // حفظ الملف
+        XLSX.writeFile(workbook, 'نموذج_استيراد_البيانات.xlsx');
+        
+        alert('✅ تم تنزيل نموذج Excel للاستيراد');
+    } catch (error) {
+        console.error('خطأ في إنشاء النموذج:', error);
+        alert('❌ حدث خطأ. تأكد من اتصال الإنترنت.');
+    }
+}
