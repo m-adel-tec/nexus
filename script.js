@@ -1449,10 +1449,10 @@ async function exportDataExcel() {
         // حفظ الملف
         XLSX.writeFile(workbook, 'موظفين_المراقبة.xlsx');
         
-        alert('✅ تم تصدير البيانات إلى ملف Excel بنجاح');
+        //alert('✅ تم تصدير البيانات إلى ملف Excel بنجاح');
     } catch (error) {
         console.error('خطأ في التصدير:', error);
-        alert('❌ حدث خطأ في التصدير. تأكد من اتصال الإنترنت.');
+        alert('حدث خطأ في التصدير. تأكد من اتصال الإنترنت.');
     }
 }
 
@@ -1515,10 +1515,10 @@ function exportDataCSV() {
         link.click();
         document.body.removeChild(link);
         
-        alert('✅ تم تصدير البيانات إلى ملف CSV بنجاح');
+        //alert('✅ تم تصدير البيانات إلى ملف CSV بنجاح');
     } catch (error) {
         console.error('خطأ في تصدير CSV:', error);
-        alert('❌ حدث خطأ في التصدير.');
+        alert('حدث خطأ في التصدير.');
     }
 }
 
@@ -1550,10 +1550,10 @@ function exportPlacesCSV() {
         link.click();
         document.body.removeChild(link);
         
-        alert('✅ تم تصدير الأماكن إلى ملف CSV بنجاح');
+        //alert('✅ تم تصدير الأماكن إلى ملف CSV بنجاح');
     } catch (error) {
         console.error('خطأ في تصدير CSV:', error);
-        alert('❌ حدث خطأ في التصدير.');
+        alert('حدث خطأ في التصدير.');
     }
 }
 
@@ -1613,9 +1613,10 @@ async function downloadTemplate() {
         // حفظ الملف
         XLSX.writeFile(workbook, 'نموذج_استيراد_البيانات.xlsx');
         
-        alert('✅ تم تنزيل نموذج Excel للاستيراد');
+        //alert('✅ تم تنزيل نموذج Excel للاستيراد');
     } catch (error) {
         console.error('خطأ في إنشاء النموذج:', error);
-        alert('❌ حدث خطأ. تأكد من اتصال الإنترنت.');
+        alert('حدث خطأ. تأكد من اتصال الإنترنت.');
     }
 }
+
