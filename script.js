@@ -689,7 +689,7 @@ async function exportDataExcel() {
         // توليد ملف Excel
         XLSX.writeFile(workbook, 'موظفين_المراقبة.xlsx');
         
-        showMessage('تم تصدير البيانات إلى ملف Excel بنجاح', 'success');
+        //showMessage('تم تصدير البيانات إلى ملف Excel بنجاح', 'success');
     } catch (error) {
         console.error('خطأ في تصدير Excel:', error);
         alert('حدث خطأ أثناء تصدير ملف Excel. تأكد من اتصال الإنترنت لتحميل المكتبة المطلوبة.');
@@ -1619,4 +1619,5 @@ async function downloadTemplate() {
         alert('حدث خطأ. تأكد من اتصال الإنترنت.');
     }
 }
+
 
