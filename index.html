@@ -646,7 +646,7 @@ footer {
             <button type="submit" class="btn-green" id="submitBtn">حفظ الموظف</button>
             <button type="button" class="btn-gray" onclick="clearForm()" id="cancelBtn" style="display:none;">إلغاء</button>
             <button type="button" class="btn-purple" onclick="exportDataExcel()">تصدير Excel</button>
-            <button type="button" class="btn-purple" onclick="exportDataCSV()" style="margin-right: 10px;">تصدير CSV</button>
+            <!--<button type="button" class="btn-purple" onclick="exportDataCSV()" style="margin-right: 10px;">تصدير CSV</button>-->
             <button type="button" class="btn-orange" onclick="document.getElementById('importFile').click()">استيراد بيانات</button>
             <input type="file" id="importFile" accept=".xlsx,.xls,.csv,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/json" style="display:none" onchange="importData(this)">
             <!--<button type="button" class="btn-red" onclick="cleanupData()" style="margin-top: 10px;">تنظيف البيانات المكررة</button>-->
@@ -759,7 +759,7 @@ footer {
             <button type="submit" class="btn-green" id="placeSubmitBtn">حفظ المكان</button>
             <button type="button" class="btn-gray" onclick="clearPlaceForm()" id="placeCancelBtn" style="display:none;">إلغاء</button>
             <button type="button" class="btn-purple" onclick="exportPlacesExcel()">تصدير Excel</button>
-            <button type="button" class="btn-purple" onclick="exportPlacesCSV()" style="margin-right: 10px;">تصدير CSV</button>
+            <!--<button type="button" class="btn-purple" onclick="exportPlacesCSV()" style="margin-right: 10px;">تصدير CSV</button>-->
             <button type="button" class="btn-orange" onclick="document.getElementById('importPlaceFile').click()">استيراد أماكن</button>
             <input type="file" id="importPlaceFile" accept=".xlsx,.xls,.csv,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv,application/json" style="display:none" onchange="importPlacesData(this)">
         </div>
@@ -2382,6 +2382,7 @@ function exportPlacesCSV() {
 </script>
 </body>
 </html>
+
 
 
 
